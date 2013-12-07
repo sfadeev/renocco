@@ -13,6 +13,7 @@ namespace Nocco {
 		public Func<string, string> GetSourcePath { get; set; }
 		public List<Section> Sections { get; set; }
 		public List<string> Sources { get; set; }
+		public string RawHtml { get; set; }
 
 		public StringBuilder Buffer { get; set; }
 

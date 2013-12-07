@@ -5,13 +5,13 @@ namespace Nocco
 {
 	internal class CommandLineOptions
 	{
-		[Option('i', "input", HelpText = "Input directory path", DefaultValue = "./")]
+		[Option('i', "input", HelpText = "Input directory path", Required = true, DefaultValue = "./")]
 		public string InputDir { get; set; }
 
-		[Option('o', "output", HelpText = "Output directory path", DefaultValue = "./docs/")]
+		[Option('o', "output", HelpText = "Output directory path", Required = true, DefaultValue = "./docs/")]
 		public string OutputDir { get; set; }
 
-		[OptionArray('e', "extension", HelpText = "Target files extension (eg *.cs)", Required = true)]
+		[OptionArray('e', "extension", HelpText = "Target files extension (eg *.cs)", DefaultValue = new [] { "*.*" })]
 		public string[] Targets { get; set; }
 
 		[ParserState]

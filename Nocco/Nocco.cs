@@ -64,18 +64,36 @@ namespace Nocco
 		// and merging them into an HTML template.
 		private static void GenerateDocumentation(CommandLineOptions options, string source)
 		{
-			var lines = File.ReadAllLines(source);
-			var sections = Parse(source, lines);
-			Hightlight(sections);
-			GenerateHtml(options, source, sections);
+			var language = GetLanguage(source);
+
+			Console.Out.WriteLine("{0} : {1}", language.Name, source);
+
+			if (Path.GetExtension(source) == ".md")
+			{
+				var text = File.ReadAllText(source);
+
+				var markdown = new Markdown();
+				var html = markdown.Transform(text);
+
+				GenerateHtml(options, source, null, html);
+			}
+			else
+			{
+				var sections = Parse(source, language);
+				
+				Hightlight(sections);
+
+				GenerateHtml(options, source, sections, null);
+			}
 		}
 
 		// Given a string of source code, parse out each comment and the code that
 		// follows it, and create an individual `Section` for it.
-		private static List<Section> Parse(string source, string[] lines)
+		private static List<Section> Parse(string source, Language language)
 		{
+			var lines = File.ReadAllLines(source);
+
 			var sections = new List<Section>();
-			var language = GetLanguage(source);
 			var hasCode = false;
 			var docsText = new StringBuilder();
 			var codeText = new StringBuilder();
@@ -130,14 +148,14 @@ namespace Nocco
 		// Once all of the code is finished highlighting, we can generate the HTML file
 		// and write out the documentation. Pass the completed sections into the template
 		// found in `Resources/Nocco.cshtml`
-		private static void GenerateHtml(CommandLineOptions options, string source, List<Section> sections)
+		private static void GenerateHtml(CommandLineOptions options, string source, List<Section> sections, string rawHtml)
 		{
 			int depth;
 			var destination = GetDestination(options, source, out depth);
 
 			string pathToRoot = String.Concat(Enumerable.Repeat(".." + Path.DirectorySeparatorChar, depth));
 
-			var htmlTemplate = Activator.CreateInstance(_templateType) as TemplateBase;
+			var htmlTemplate = (TemplateBase)Activator.CreateInstance(_templateType);
 
 			htmlTemplate.Title = Path.GetFileName(source);
 			htmlTemplate.PathToCss = Path.Combine(pathToRoot, "nocco.css").Replace('\\', '/');
@@ -145,6 +163,7 @@ namespace Nocco
 			htmlTemplate.GetSourcePath =
 				s => Path.Combine(pathToRoot, Path.ChangeExtension(s, ".html").Substring(2)).Replace('\\', '/');
 			htmlTemplate.Sections = sections;
+			htmlTemplate.RawHtml = rawHtml;
 			htmlTemplate.Sources = _files;
 
 			htmlTemplate.Execute();
@@ -206,6 +225,12 @@ namespace Nocco
 		// [XML documentation comments](http://msdn.microsoft.com/en-us/library/b2s063f7.aspx) into Markdown.
 		private static readonly Dictionary<string, Language> Languages = new Dictionary<string, Language>
 		{
+			{
+				".md", new Language
+				{
+					Name = "markdown"
+				}
+			},
 			{
 				".js", new Language
 				{
@@ -298,10 +323,9 @@ namespace Nocco
 				{
 					_files.AddRange(Directory.GetFiles(options.InputDir, target, SearchOption.AllDirectories).Where(filename =>
 					{
-						var language = GetLanguage(Path.GetFileName(filename));
+						var language = GetLanguage(filename);
 
-						if (language == null)
-							return false;
+						if (language == null) return false;
 
 						// Check if the file extension should be ignored
 						if (language.Ignores != null && language.Ignores.Any(ignore => filename.EndsWith(ignore)))
