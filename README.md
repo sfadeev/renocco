@@ -1,16 +1,12 @@
 # reNocco
 
-reNocco is a quick-and-dirty, literate-programming-style
-documentation generator.
-
-reNocco is a extension of Nocco, Nocco is a port of Docco, 
+reNocco is a reincarnation of Nocco, Nocco is a port of Docco, 
 the original quick-and-dirty, literate-programming-style
 documentation generator written in CoffeeScript.
 
 For more information, see:
 
 <http://dontangg.github.com/nocco>
-
 <http://jashkenas.github.com/docco/>
 
 ### Roadmap
