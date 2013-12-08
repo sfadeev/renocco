@@ -148,12 +148,12 @@ namespace Nocco
 		// Once all of the code is finished highlighting, we can generate the HTML file
 		// and write out the documentation. Pass the completed sections into the template
 		// found in `Resources/Nocco.cshtml`
-		private static void GenerateHtml(CommandLineOptions options, string source, List<Section> sections, string rawHtml)
+		private static void GenerateHtml(CommandLineOptions options, string source, IList<Section> sections, string rawHtml)
 		{
 			int depth;
 			var destination = GetDestination(options, source, out depth);
 
-			string pathToRoot = String.Concat(Enumerable.Repeat(".." + Path.DirectorySeparatorChar, depth));
+			string pathToRoot = string.Concat(Enumerable.Repeat(".." + Path.DirectorySeparatorChar, depth));
 
 			var htmlTemplate = (TemplateBase)Activator.CreateInstance(_templateType);
 
@@ -161,7 +161,7 @@ namespace Nocco
 			htmlTemplate.PathToCss = Path.Combine(pathToRoot, "nocco.css").Replace('\\', '/');
 			htmlTemplate.PathToJs = Path.Combine(pathToRoot, "prettify.js").Replace('\\', '/');
 			htmlTemplate.GetSourcePath =
-				s => Path.Combine(pathToRoot, Path.ChangeExtension(s, ".html").Substring(2)).Replace('\\', '/');
+				s => Path.Combine(pathToRoot, (s + ".html").Substring(2)).Replace('\\', '/');
 			htmlTemplate.Sections = sections;
 			htmlTemplate.RawHtml = rawHtml;
 			htmlTemplate.Sources = _files;
@@ -298,10 +298,11 @@ namespace Nocco
 			               .Split(new[] { Path.DirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
 			depth = dirs.Length;
 
-			var dest = Path.Combine(options.OutputDir, String.Join(Path.DirectorySeparatorChar.ToString(), dirs)).ToLower();
+			var dest = Path.Combine(options.OutputDir, string.Join(Path.DirectorySeparatorChar.ToString(), dirs));
+
 			Directory.CreateDirectory(dest);
 
-			return Path.Combine(options.OutputDir, Path.ChangeExtension(filepath, "html").ToLower());
+			return Path.Combine(options.OutputDir, filepath + ".html");
 		}
 
 		// Find all the files that match the pattern(s) passed in as arguments and

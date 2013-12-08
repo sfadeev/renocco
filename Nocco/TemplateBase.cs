@@ -11,8 +11,8 @@ namespace Nocco {
 		public string PathToCss { get; set; }
         public string PathToJs { get; set; }
 		public Func<string, string> GetSourcePath { get; set; }
-		public List<Section> Sections { get; set; }
-		public List<string> Sources { get; set; }
+		public IList<Section> Sections { get; set; }
+		public IList<string> Sources { get; set; }
 		public string RawHtml { get; set; }
 
 		public StringBuilder Buffer { get; set; }

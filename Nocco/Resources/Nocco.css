@@ -31,6 +31,7 @@ h4, h5, h6 {
     }
 #container {
   position: relative;
+  padding: 0 0 0 50px;
 }
 #background {
   position: fixed;
@@ -41,28 +42,31 @@ h4, h5, h6 {
 }
 #jump_to, #jump_page {
   background: white;
-  -webkit-box-shadow: 0 0 25px #777; -moz-box-shadow: 0 0 25px #777;
-  -webkit-border-bottom-left-radius: 5px; -moz-border-radius-bottomleft: 5px;
   font: 10px Arial;
-  text-transform: uppercase;
+  /*text-transform: uppercase;*/
   cursor: pointer;
-  text-align: right;
+  /*text-align: right;*/
 }
 #jump_to, #jump_wrapper {
+  -webkit-box-shadow: 0 0 25px #777; -moz-box-shadow: 0 0 25px #777;
+  -webkit-border-bottom-right-radius: 5px; -moz-border-radius-bottomright: 5px;
   position: fixed;
-  right: 0; top: 0;
+  left: 0; top: 0;
   padding: 5px 10px;
-}
+  }
   #jump_wrapper {
     padding: 0;
     display: none;
+  max-height: 600px;
+  overflow-y: auto;
+  background: white;
   }
     #jump_to:hover #jump_wrapper {
       display: block;
     }
     #jump_page {
-      padding: 5px 0 3px;
-      margin: 0 0 25px 25px;
+      padding: 5px 0 3px 0;
+      /*margin: 0 0 25px 25px;*/
     }
       #jump_page .source {
         display: block;
@@ -83,7 +87,7 @@ table td {
     max-width: 450px;
     min-width: 450px;
     min-height: 5px;
-    padding: 10px 25px 1px 50px;
+    padding: 10px 25px 1px 0;
     overflow-x: hidden;
     vertical-align: top;
     text-align: left;
