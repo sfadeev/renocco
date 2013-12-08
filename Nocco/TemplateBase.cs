@@ -3,21 +3,23 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nocco {
-	public abstract class TemplateBase {
-
+namespace Nocco
+{
+	public abstract class TemplateBase
+	{
 		// Properties available from within the template
 		public string Title { get; set; }
 		public string PathToCss { get; set; }
-        public string PathToJs { get; set; }
+		public string PathToJs { get; set; }
 		public Func<string, string> GetSourcePath { get; set; }
 		public IList<Section> Sections { get; set; }
-		public IList<string> Sources { get; set; }
+		public IList<SourceInfo> Sources { get; set; }
 		public string RawHtml { get; set; }
 
 		public StringBuilder Buffer { get; set; }
 
-		protected TemplateBase() {
+		protected TemplateBase()
+		{
 			Buffer = new StringBuilder();
 		}
 
@@ -25,11 +27,13 @@ namespace Nocco {
 		// class. It generates the HTML by calling `Write` and `WriteLiteral`.
 		public abstract void Execute();
 
-		public virtual void Write(object value) {
+		public virtual void Write(object value)
+		{
 			WriteLiteral(value);
 		}
 
-		public virtual void WriteLiteral(object value) {
+		public virtual void WriteLiteral(object value)
+		{
 			Buffer.Append(value);
 		}
 	}

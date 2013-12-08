@@ -14,14 +14,42 @@
 				Jump To &hellip;
 				<div id="jump_wrapper">
 					<div id="jump_page">
-						@for (var i = 0; i < Sources.Count; i++) {
-							<a class="source" href="@GetSourcePath(Sources[i])">
-								@Sources[i].Substring(2)
-							</a>
+						@for (var i = 0; i < Sources.Count; i++)
+						{
+							if (Sources[i].OutputPath != null)
+							{
+								<a class="source" href="@GetSourcePath(Sources[i].InputPath)">
+									@Sources[i].InputPath.Substring(2)
+								</a>
+							}
 						}
 					</div>
 				</div>
 			</div>
+		}
+		
+		@if (RawHtml == null && Sections == null)
+		{
+			<h1>Index</h1>
+			<ul>
+				@for (var i = 0; i < Sources.Count; i++)
+				{
+					<li>
+						@if (Sources[i].OutputPath != null)
+						{
+							<a href="@GetSourcePath(Sources[i].InputPath)">
+								@Sources[i].InputPath.Substring(2)
+							</a>
+						}
+						else
+						{
+							<span>
+								@Sources[i].InputPath.Substring(2)
+							</span>
+						}
+					</li>
+				}
+			</ul>
 		}
 		
 		@if (RawHtml != null)

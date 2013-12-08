@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 // A smart class used for generating nice HTML based on the language of your choice.
 namespace Nocco
 {
-	class Language
+	public class Language
 	{
 		public string Name;
 
@@ -16,6 +16,6 @@ namespace Nocco
 
 		public IDictionary<string, string> MarkdownMaps;
 
-		public IList<string> Ignores;
+		public string[] Ignores;
 	}
 }

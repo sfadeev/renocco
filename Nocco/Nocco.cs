@@ -45,16 +45,16 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
 using System.Web.Razor;
-using CommandLine;
 using MarkdownSharp;
 using Microsoft.CSharp;
 
 namespace Nocco
 {
-	internal class Nocco
+	public class Nocco
 	{
+		private static CommandLineOptions _options;
 		private static string _executingDirectory;
-		private static List<string> _files;
+		private static IList<SourceInfo> _sources;
 		private static Type _templateType;
 
 		//### Main Documentation Generation Functions
@@ -62,36 +62,40 @@ namespace Nocco
 		// Generate the documentation for a source file by reading it in, splitting it
 		// up into comment/code sections, highlighting them for the appropriate language,
 		// and merging them into an HTML template.
-		private static void GenerateDocumentation(CommandLineOptions options, string source)
+		private static void GenerateDocumentation(SourceInfo source)
 		{
-			var language = GetLanguage(source);
-
-			Console.Out.WriteLine("{0} : {1}", language.Name, source);
-
-			if (Path.GetExtension(source) == ".md")
+			if (source.InputPath.EndsWith("index.html"))
 			{
-				var text = File.ReadAllText(source);
+				GenerateHtml(source, null, null);
+				return;
+			}
+
+			if (source.Language == null) return;
+
+			if (Path.GetExtension(source.InputPath) == ".md")
+			{
+				var text = File.ReadAllText(source.InputPath);
 
 				var markdown = new Markdown();
 				var html = markdown.Transform(text);
 
-				GenerateHtml(options, source, null, html);
+				GenerateHtml(source, null, html);
 			}
 			else
 			{
-				var sections = Parse(source, language);
+				var sections = Parse(source);
 				
 				Hightlight(sections);
 
-				GenerateHtml(options, source, sections, null);
+				GenerateHtml(source, sections, null);
 			}
 		}
 
 		// Given a string of source code, parse out each comment and the code that
 		// follows it, and create an individual `Section` for it.
-		private static List<Section> Parse(string source, Language language)
+		private static List<Section> Parse(SourceInfo source)
 		{
-			var lines = File.ReadAllLines(source);
+			var lines = File.ReadAllLines(source.InputPath);
 
 			var sections = new List<Section>();
 			var hasCode = false;
@@ -101,15 +105,15 @@ namespace Nocco
 			Action<string, string> save = (docs, code) => sections.Add(new Section { DocsHtml = docs, CodeHtml = code });
 			Func<string, string> mapToMarkdown = docs =>
 			{
-				if (language.MarkdownMaps != null)
-					docs = language.MarkdownMaps.Aggregate(docs,
+				if (source.Language.MarkdownMaps != null)
+					docs = source.Language.MarkdownMaps.Aggregate(docs,
 						(currentDocs, map) => Regex.Replace(currentDocs, map.Key, map.Value, RegexOptions.Multiline));
 				return docs;
 			};
 
 			foreach (var line in lines)
 			{
-				if (language.CommentMatcher.IsMatch(line) && !language.CommentFilter.IsMatch(line))
+				if (source.Language.CommentMatcher.IsMatch(line) && !source.Language.CommentFilter.IsMatch(line))
 				{
 					if (hasCode)
 					{
@@ -118,7 +122,7 @@ namespace Nocco
 						docsText = new StringBuilder();
 						codeText = new StringBuilder();
 					}
-					docsText.AppendLine(language.CommentMatcher.Replace(line, ""));
+					docsText.AppendLine(source.Language.CommentMatcher.Replace(line, ""));
 				}
 				else
 				{
@@ -134,7 +138,7 @@ namespace Nocco
 		// Prepares a single chunk of code for HTML output and runs the text of its
 		// corresponding comment through **Markdown**, using a C# implementation
 		// called [MarkdownSharp](http://code.google.com/p/markdownsharp/).
-		private static void Hightlight(List<Section> sections)
+		private static void Hightlight(IEnumerable<Section> sections)
 		{
 			var markdown = new Markdown();
 
@@ -148,27 +152,27 @@ namespace Nocco
 		// Once all of the code is finished highlighting, we can generate the HTML file
 		// and write out the documentation. Pass the completed sections into the template
 		// found in `Resources/Nocco.cshtml`
-		private static void GenerateHtml(CommandLineOptions options, string source, IList<Section> sections, string rawHtml)
+		private static void GenerateHtml(SourceInfo source, IList<Section> sections, string rawHtml)
 		{
-			int depth;
-			var destination = GetDestination(options, source, out depth);
+			/*int depth;
+			var destination = GetDestination(source, out depth);
 
-			string pathToRoot = string.Concat(Enumerable.Repeat(".." + Path.DirectorySeparatorChar, depth));
+			string pathToRoot = string.Concat(Enumerable.Repeat(".." + Path.DirectorySeparatorChar, depth));*/
 
 			var htmlTemplate = (TemplateBase)Activator.CreateInstance(_templateType);
 
-			htmlTemplate.Title = Path.GetFileName(source);
-			htmlTemplate.PathToCss = Path.Combine(pathToRoot, "nocco.css").Replace('\\', '/');
-			htmlTemplate.PathToJs = Path.Combine(pathToRoot, "prettify.js").Replace('\\', '/');
+			htmlTemplate.Title = Path.GetFileName(source.InputPath);
+			htmlTemplate.PathToCss = Path.Combine(source.PathToRoot, "nocco.css").Replace('\\', '/');
+			htmlTemplate.PathToJs = Path.Combine(source.PathToRoot, "prettify.js").Replace('\\', '/');
 			htmlTemplate.GetSourcePath =
-				s => Path.Combine(pathToRoot, (s + ".html").Substring(2)).Replace('\\', '/');
+				s => Path.Combine(source.PathToRoot, Path.GetExtension(s) == ".html" ? s : (s + ".html").Substring(2)).Replace('\\', '/');
 			htmlTemplate.Sections = sections;
 			htmlTemplate.RawHtml = rawHtml;
-			htmlTemplate.Sources = _files;
+			htmlTemplate.Sources = _sources;
 
 			htmlTemplate.Execute();
 
-			File.WriteAllText(destination, htmlTemplate.Buffer.ToString());
+			File.WriteAllText(source.OutputPath, htmlTemplate.Buffer.ToString());
 		}
 
 		//### Helpers & Setup
@@ -182,13 +186,16 @@ namespace Nocco
 		// and generate the HTML.
 		private static Type SetupRazorTemplate()
 		{
-			var host = new RazorEngineHost(new CSharpRazorCodeLanguage());
-			host.DefaultBaseClass = typeof(TemplateBase).FullName;
-			host.DefaultNamespace = "RazorOutput";
-			host.DefaultClassName = "Template";
+			var host = new RazorEngineHost(new CSharpRazorCodeLanguage())
+			{
+				DefaultBaseClass = typeof(TemplateBase).FullName,
+				DefaultNamespace = "RazorOutput",
+				DefaultClassName = "Template"
+			};
+
 			host.NamespaceImports.Add("System");
 
-			GeneratorResults razorResult = null;
+			GeneratorResults razorResult;
 			using (var reader = new StreamReader(Path.Combine(_executingDirectory, "Resources", "Nocco.cshtml")))
 			{
 				razorResult = new RazorTemplateEngine(host).GenerateCode(reader);
@@ -201,6 +208,7 @@ namespace Nocco
 				IncludeDebugInformation = false,
 				CompilerOptions = "/target:library /optimize"
 			};
+
 			compilerParams.ReferencedAssemblies.Add(typeof(Nocco).Assembly.CodeBase.Replace("file:///", "").Replace("/", "\\"));
 
 			var codeProvider = new CSharpCodeProvider();
@@ -236,10 +244,7 @@ namespace Nocco
 				{
 					Name = "javascript",
 					Symbol = "//",
-					Ignores = new List<string>
-					{
-						"min.js"
-					}
+					Ignores = new [] { "min.js" }
 				}
 			},
 			{
@@ -247,10 +252,7 @@ namespace Nocco
 				{
 					Name = "csharp",
 					Symbol = "///?",
-					Ignores = new List<string>
-					{
-						"Designer.cs"
-					},
+					Ignores = new[] { "Designer.cs" },
 					MarkdownMaps = new Dictionary<string, string>
 					{
 						{ @"<c>([^<]*)</c>", "`$1`" },
@@ -266,10 +268,7 @@ namespace Nocco
 				{
 					Name = "vb.net",
 					Symbol = "'+",
-					Ignores = new List<string>
-					{
-						"Designer.vb"
-					},
+					Ignores = new[] { "Designer.vb" },
 					MarkdownMaps = new Dictionary<string, string>
 					{
 						{ @"<c>([^<]*)</c>", "`$1`" },
@@ -286,73 +285,130 @@ namespace Nocco
 		private static Language GetLanguage(string source)
 		{
 			var extension = Path.GetExtension(source);
-			return Languages.ContainsKey(extension) ? Languages[extension] : null;
+
+			Language language;
+			if (extension != null && Languages.TryGetValue(extension, out language))
+			{
+				return language;
+			}
+
+			return null;
 		}
 
 		// Compute the destination HTML path for an input source file path. If the source
 		// is `Example.cs`, the HTML will be at `docs/example.html`
-		private static string GetDestination(CommandLineOptions options, string filepath, out int depth)
+		private static string GetDestination(string filepath, out int depth)
 		{
 			var dirs = Path.GetDirectoryName(filepath)
 			               .Substring(1)
 			               .Split(new[] { Path.DirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
 			depth = dirs.Length;
 
-			var dest = Path.Combine(options.OutputDir, string.Join(Path.DirectorySeparatorChar.ToString(), dirs));
+			var dest = Path.Combine(_options.OutputDir, string.Join(Path.DirectorySeparatorChar.ToString(), dirs));
 
 			Directory.CreateDirectory(dest);
 
-			return Path.Combine(options.OutputDir, filepath + ".html");
+			return Path.Combine(_options.OutputDir, Path.GetExtension(filepath) == ".html" ? filepath : filepath + ".html");
 		}
 
 		// Find all the files that match the pattern(s) passed in as arguments and
 		// generate documentation for each one.
-		public static void Generate(CommandLineOptions options)
+		public static void Generate()
 		{
-			if (options.Targets.Length > 0)
+			if (_options.Targets.Length > 0)
 			{
-				Directory.CreateDirectory(options.OutputDir);
+				Directory.CreateDirectory(_options.OutputDir);
 
 				_executingDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-				File.Copy(Path.Combine(_executingDirectory, "Resources", "Nocco.css"), Path.Combine(options.OutputDir, "nocco.css"), true);
-				File.Copy(Path.Combine(_executingDirectory, "Resources", "prettify.js"), Path.Combine(options.OutputDir, "prettify.js"), true);
+
+				var resources = new[] { "nocco.css", "prettify.js" };
+				foreach (var resource in resources)
+				{
+					File.Copy(Path.Combine(_executingDirectory, "Resources", resource), Path.Combine(_options.OutputDir, resource), true);
+				}
 
 				_templateType = SetupRazorTemplate();
 
-				_files = new List<string>();
-				foreach (var target in options.Targets)
+				var files = new List<string>();
+
+				foreach (var target in _options.Targets)
 				{
-					_files.AddRange(Directory.GetFiles(options.InputDir, target, SearchOption.AllDirectories).Where(filename =>
-					{
-						var language = GetLanguage(filename);
-
-						if (language == null) return false;
-
-						// Check if the file extension should be ignored
-						if (language.Ignores != null && language.Ignores.Any(ignore => filename.EndsWith(ignore)))
-							return false;
-
-						// Don't include certain directories
-						var foldersToExclude = new string[] { @"\docs", @"\bin", @"\obj" };
-						if (foldersToExclude.Any(folder => Path.GetDirectoryName(filename).Contains(folder)))
-							return false;
-
-						return true;
-					}));
+					files.AddRange(Directory.GetFileSystemEntries(_options.InputDir, target, SearchOption.AllDirectories));
 				}
 
-				foreach (var file in _files)
-					GenerateDocumentation(options, file);
+				_sources = CollectSourceInfos(files);
+
+				foreach (var source in _sources)
+				{
+					GenerateDocumentation(source);
+				}
 			}
+		}
+
+		private static IList<SourceInfo> CollectSourceInfos(IEnumerable<string> files)
+		{
+			// Don't include certain directories
+			var foldersToExclude = new[] { "\\docs", "\\bin", "\\obj", "\\packages", "\\.nuget", "\\.git", "\\.svn" };
+
+			var result = new List<SourceInfo>();
+
+			var index = new SourceInfo
+			{
+				InputPath = Path.Combine(_options.InputDir, "index.html"),
+			};
+
+			result.Add(index);
+
+			int depth;
+			var destination = GetDestination(index.InputPath, out depth);
+			var pathToRoot = string.Concat(Enumerable.Repeat(".." + Path.DirectorySeparatorChar, depth));
+
+			index.OutputPath = destination;
+			index.PathToRoot = pathToRoot;
+
+			foreach (var filename in files)
+			{
+				if (foldersToExclude.Any(folder => Path.GetDirectoryName(filename).Contains(folder)))
+				{
+					continue;
+				}
+
+				if (Directory.Exists(filename))
+				{
+					result.Add(new SourceInfo { InputPath = filename });
+					continue;
+				}
+
+				var language = GetLanguage(filename);
+
+				if (language == null) continue;
+
+				// Check if the file extension should be ignored
+				if (language.Ignores != null && language.Ignores.Any(filename.EndsWith))
+					continue;
+
+				destination = GetDestination(filename, out depth);
+				pathToRoot = string.Concat(Enumerable.Repeat(".." + Path.DirectorySeparatorChar, depth));
+
+				result.Add(new SourceInfo
+				{
+					Language = language,
+					InputPath = filename,
+					OutputPath = destination,
+					PathToRoot = pathToRoot
+				});
+			}
+
+			return result;
 		}
 
 		public static void Main(string[] args)
 		{
-			var options = new CommandLineOptions();
+			_options = new CommandLineOptions();
 
-			if (Parser.Default.ParseArguments(args, options))
+			if (CommandLine.Parser.Default.ParseArguments(args, _options))
 			{
-				Generate(options);
+				Generate();
 			}
 		}
 	}
