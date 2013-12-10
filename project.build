@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<project default="build">
+
+	<target name="build">
+	    <exec program="${environment::get-variable('SystemRoot')}\Microsoft.NET\Framework\v4.0.30319\msbuild.exe">
+			<arg value="/nologo" />
+			<arg value="/verbosity:minimal" />
+			<arg value="/property:WarningLevel=4;Configuration=Debug" />
+			<arg value="/p:BuildInParallel=true" />
+			<arg value="/maxcpucount" />
+	    </exec>
+	</target>
+
+</project>
