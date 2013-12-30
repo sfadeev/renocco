@@ -336,7 +336,7 @@ namespace Nocco
 					files.AddRange(Directory.GetFileSystemEntries(_options.InputDir, target, SearchOption.AllDirectories));
 				}
 
-				_sources = CollectSourceInfos(files);
+				_sources = CollectSourceInfos(files.Select(x => x.Replace('\\', '/')).OrderBy(x => x));
 
 				foreach (var source in _sources)
 				{
