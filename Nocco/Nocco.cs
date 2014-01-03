@@ -62,103 +62,96 @@ namespace Nocco
 		// Generate the documentation for a source file by reading it in, splitting it
 		// up into comment/code sections, highlighting them for the appropriate language,
 		// and merging them into an HTML template.
-		private static void GenerateDocumentation(SourceInfo source)
+		private static string GenerateDocumentation(SourceInfo source)
 		{
 			if (source.InputPath.EndsWith("index.html"))
 			{
-				GenerateHtml(source, null, null);
-				return;
+				return GenerateHtml(source, null, null);
 			}
 
-			if (source.Language == null) return;
+			if (source.Language == null) return null;
+
+			var markdown = new Markdown();
 
 			if (Path.GetExtension(source.InputPath) == ".md")
 			{
 				var text = File.ReadAllText(source.InputPath);
 
-				var markdown = new Markdown();
 				var html = markdown.Transform(text);
 
-				GenerateHtml(source, null, html);
+				return GenerateHtml(source, null, html);
 			}
 			else
 			{
 				var sections = Parse(source);
-				
-				Hightlight(sections);
 
-				GenerateHtml(source, sections, null);
+				// Prepares a single chunk of code for HTML output and runs the text of its
+				// corresponding comment through **Markdown**, using a C# implementation
+				// called [MarkdownSharp](http://code.google.com/p/markdownsharp/).
+				foreach (var section in sections)
+				{
+					section.DocsHtml = markdown.Transform(section.DocsHtml);
+					section.CodeHtml = HttpUtility.HtmlEncode(section.CodeHtml);
+				}
+
+				return GenerateHtml(source, sections, null);
 			}
 		}
 
 		// Given a string of source code, parse out each comment and the code that
 		// follows it, and create an individual `Section` for it.
-		private static List<Section> Parse(SourceInfo source)
+		private static IList<Section> Parse(SourceInfo source)
 		{
 			var lines = File.ReadAllLines(source.InputPath);
 
 			var sections = new List<Section>();
-			var hasCode = false;
 			var docsText = new StringBuilder();
 			var codeText = new StringBuilder();
 
-			Action<string, string> save = (docs, code) => sections.Add(new Section { DocsHtml = docs, CodeHtml = code });
-			Func<string, string> mapToMarkdown = docs =>
+			Action<string, string> addSection = (docs, code) =>
 			{
 				if (source.Language.MarkdownMaps != null)
+				{
 					docs = source.Language.MarkdownMaps.Aggregate(docs,
 						(currentDocs, map) => Regex.Replace(currentDocs, map.Key, map.Value, RegexOptions.Multiline));
-				return docs;
+				}
+
+				sections.Add(new Section
+				{
+					DocsHtml = docs,
+					CodeHtml = code
+				});
 			};
 
 			foreach (var line in lines)
 			{
 				if (source.Language.CommentMatcher.IsMatch(line) && !source.Language.CommentFilter.IsMatch(line))
 				{
-					if (hasCode)
+					if (codeText.Length > 0)
 					{
-						save(mapToMarkdown(docsText.ToString()), codeText.ToString());
-						hasCode = false;
-						docsText = new StringBuilder();
-						codeText = new StringBuilder();
+						addSection(docsText.ToString(), codeText.ToString());
+						docsText.Length = 0;
+						codeText.Length = 0;
 					}
-					docsText.AppendLine(source.Language.CommentMatcher.Replace(line, ""));
+
+					docsText.AppendLine(source.Language.CommentMatcher.Replace(line, string.Empty));
 				}
 				else
 				{
-					hasCode = true;
 					codeText.AppendLine(line);
 				}
 			}
-			save(mapToMarkdown(docsText.ToString()), codeText.ToString());
+
+			addSection(docsText.ToString(), codeText.ToString());
 
 			return sections;
-		}
-
-		// Prepares a single chunk of code for HTML output and runs the text of its
-		// corresponding comment through **Markdown**, using a C# implementation
-		// called [MarkdownSharp](http://code.google.com/p/markdownsharp/).
-		private static void Hightlight(IEnumerable<Section> sections)
-		{
-			var markdown = new Markdown();
-
-			foreach (var section in sections)
-			{
-				section.DocsHtml = markdown.Transform(section.DocsHtml);
-				section.CodeHtml = HttpUtility.HtmlEncode(section.CodeHtml);
-			}
 		}
 
 		// Once all of the code is finished highlighting, we can generate the HTML file
 		// and write out the documentation. Pass the completed sections into the template
 		// found in `Resources/Nocco.cshtml`
-		private static void GenerateHtml(SourceInfo source, IList<Section> sections, string rawHtml)
+		private static string GenerateHtml(SourceInfo source, IList<Section> sections, string rawHtml)
 		{
-			/*int depth;
-			var destination = GetDestination(source, out depth);
-
-			string pathToRoot = string.Concat(Enumerable.Repeat(".." + Path.DirectorySeparatorChar, depth));*/
-
 			var htmlTemplate = (TemplateBase)Activator.CreateInstance(_templateType);
 
 			htmlTemplate.Title = Path.GetFileName(source.InputPath);
@@ -172,7 +165,7 @@ namespace Nocco
 
 			htmlTemplate.Execute();
 
-			File.WriteAllText(source.OutputPath, htmlTemplate.Buffer.ToString());
+			return htmlTemplate.GetBuffer();
 		}
 
 		//### Helpers & Setup
@@ -243,7 +236,7 @@ namespace Nocco
 				".js", new Language
 				{
 					Name = "javascript",
-					Symbol = "//",
+					CommentSymbol = "//",
 					Ignores = new [] { "min.js" }
 				}
 			},
@@ -251,7 +244,7 @@ namespace Nocco
 				".cs", new Language
 				{
 					Name = "csharp",
-					Symbol = "///?",
+					CommentSymbol = "///?",
 					Ignores = new[] { "Designer.cs" },
 					MarkdownMaps = new Dictionary<string, string>
 					{
@@ -267,7 +260,7 @@ namespace Nocco
 				".vb", new Language
 				{
 					Name = "vb.net",
-					Symbol = "'+",
+					CommentSymbol = "'+",
 					Ignores = new[] { "Designer.vb" },
 					MarkdownMaps = new Dictionary<string, string>
 					{
@@ -340,7 +333,9 @@ namespace Nocco
 
 				foreach (var source in _sources)
 				{
-					GenerateDocumentation(source);
+					var result = GenerateDocumentation(source);
+
+					if (result != null) File.WriteAllText(source.OutputPath, result);
 				}
 			}
 		}

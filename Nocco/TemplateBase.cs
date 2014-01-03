@@ -7,6 +7,8 @@ namespace Nocco
 {
 	public abstract class TemplateBase
 	{
+		private readonly StringBuilder _buffer = new StringBuilder();
+
 		// Properties available from within the template
 		public string Title { get; set; }
 		public string PathToCss { get; set; }
@@ -15,13 +17,6 @@ namespace Nocco
 		public IList<Section> Sections { get; set; }
 		public IList<SourceInfo> Sources { get; set; }
 		public string RawHtml { get; set; }
-
-		public StringBuilder Buffer { get; set; }
-
-		protected TemplateBase()
-		{
-			Buffer = new StringBuilder();
-		}
 
 		// This `Execute` function will be defined in the inheriting template
 		// class. It generates the HTML by calling `Write` and `WriteLiteral`.
@@ -34,7 +29,12 @@ namespace Nocco
 
 		public virtual void WriteLiteral(object value)
 		{
-			Buffer.Append(value);
+			_buffer.Append(value);
+		}
+
+		public string GetBuffer()
+		{
+			return _buffer.ToString();
 		}
 	}
 }

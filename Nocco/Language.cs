@@ -8,9 +8,9 @@ namespace Nocco
 	{
 		public string Name;
 
-		public string Symbol;
+		public string CommentSymbol;
 
-		public Regex CommentMatcher { get { return new Regex(@"^\s*" + Symbol + @"\s?"); } }
+		public Regex CommentMatcher { get { return new Regex(@"^\s*" + CommentSymbol + @"\s?"); } }
 
 		public Regex CommentFilter { get { return new Regex(@"(^#![/]|^\s*#\{)"); } }
 
