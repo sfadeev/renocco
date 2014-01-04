@@ -28,7 +28,7 @@
 			</div>
 		}
 		
-		@if (RawHtml == null && Sections == null)
+		@if (Model.RawHtml == null && Model.Sections == null)
 		{
 			<h1>Index</h1>
 			<ul>
@@ -52,12 +52,12 @@
 			</ul>
 		}
 		
-		@if (RawHtml != null)
+		@if (Model.RawHtml != null)
 		{
-			@RawHtml
+			@Model.RawHtml
 		}
 		
-		@if (Sections != null)
+		@if (Model.Sections != null)
 		{
 			<div id="background"></div>
 
@@ -71,16 +71,17 @@
 					</tr>
 				</thead>
 				<tbody>
-					@for (var i = 0; i < Sections.Count; i++) {
+					@for (var i = 0; i < Model.Sections.Count; i++)
+					{
 						<tr id="section_@(i + 1)">
 							<td class="docs">
 								<div class="pilwrap">
 									<a class="pilcrow" href="#section_@(i + 1)">&#182;</a>
 								</div>
-								@Sections[i].DocsHtml
+								@Model.Sections[i].DocsHtml
 							</td>
 							<td class="code">
-								<pre><code class='prettyprint'>@Sections[i].CodeHtml</code></pre>
+								<pre><code class='prettyprint'>@Model.Sections[i].CodeHtml</code></pre>
 							</td>
 						</tr>
 					}

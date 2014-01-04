@@ -14,9 +14,8 @@ namespace Nocco
 		public string PathToCss { get; set; }
 		public string PathToJs { get; set; }
 		public Func<string, string> GetSourcePath { get; set; }
-		public IList<Section> Sections { get; set; }
 		public IList<SourceInfo> Sources { get; set; }
-		public string RawHtml { get; set; }
+		public SourceModel Model { get; set; }
 
 		// This `Execute` function will be defined in the inheriting template
 		// class. It generates the HTML by calling `Write` and `WriteLiteral`.

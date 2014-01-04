@@ -3,7 +3,9 @@
 namespace Nocco
 {
 	public class Section {
-		public string CodeHtml;
-		public string DocsHtml;
+
+		public string CodeHtml { get; set; }
+
+		public string DocsHtml { get; set; }
 	}
 }
