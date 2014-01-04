@@ -1,5 +1,5 @@
 ﻿using System.IO;
-using MarkdownSharp;
+using Nocco.Markdown;
 
 namespace Nocco.Transformers
 {
@@ -7,7 +7,7 @@ namespace Nocco.Transformers
 	{
 		public override SourceModel Transform(SourceInfo source)
 		{
-			var markdown = new Markdown();
+			IMarkdownTransformer markdown = new MarkdownDeepTransformer();
 
 			var text = File.ReadAllText(source.InputPath);
 

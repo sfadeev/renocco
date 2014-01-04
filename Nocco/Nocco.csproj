@@ -42,9 +42,12 @@
   <ItemGroup>
     <Compile Include="Transformers\AbstractSourceTransformer.cs" />
     <Compile Include="CommandLineOptions.cs" />
+    <Compile Include="Markdown\IMarkdownTransformer.cs" />
     <Compile Include="Transformers\IndexTransformer.cs" />
     <Compile Include="Transformers\ISourceTransformer.cs" />
     <Compile Include="Transformers\LanguageTransformer.cs" />
+    <Compile Include="Markdown\MarkdownDeepTransformer.cs" />
+    <Compile Include="Markdown\MarkdownSharpTransformer.cs" />
     <Compile Include="Transformers\MarkdownTransformer.cs" />
     <Compile Include="Nocco.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -57,6 +60,9 @@
   <ItemGroup>
     <Reference Include="CommandLine">
       <HintPath>..\packages\CommandLineParser.1.9.71\lib\net40\CommandLine.dll</HintPath>
+    </Reference>
+    <Reference Include="MarkdownDeep">
+      <HintPath>..\packages\MarkdownDeep.NET.1.5\lib\.NetFramework 3.5\MarkdownDeep.dll</HintPath>
     </Reference>
     <Reference Include="MarkdownSharp">
       <HintPath>..\packages\MarkdownSharp.1.13.0.0\lib\35\MarkdownSharp.dll</HintPath>

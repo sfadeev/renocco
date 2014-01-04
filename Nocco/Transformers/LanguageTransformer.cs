@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
-using MarkdownSharp;
+using Nocco.Markdown;
 
 namespace Nocco.Transformers
 {
@@ -31,7 +31,7 @@ namespace Nocco.Transformers
 		// and merging them into an HTML template.
 		public override SourceModel Transform(SourceInfo source)
 		{
-			var markdown = new Markdown();
+			IMarkdownTransformer markdown = new MarkdownDeepTransformer();
 
 			var sections = Parse(source);
 
