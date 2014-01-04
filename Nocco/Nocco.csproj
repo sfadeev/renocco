@@ -41,7 +41,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="CommandLineOptions.cs" />
-    <Compile Include="ISourceProcessor.cs" />
+    <Compile Include="ISourceTransformer.cs" />
     <Compile Include="Language.cs" />
     <Compile Include="Nocco.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
